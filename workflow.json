@@ -1,0 +1,1151 @@
+{
+  "name": "comment triage agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        448
+      ],
+      "id": "aab92486-3b70-4a2c-b1d3-36ed059e4483",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/commentThreads",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "YOUR_YOUTUBE_API_KEY"
+            },
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "videoId",
+              "value": "YOUR_VIDEO_ID"
+            },
+            {
+              "name": "maxResults",
+              "value": "100"
+            },
+            {
+              "name": "order",
+              "value": "relevance"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        304,
+        448
+      ],
+      "id": "c00e49dd-e6e1-4216-8659-a000f6a7fb1d",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {
+          "maxTokensToSample": 300,
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        1496,
+        140
+      ],
+      "id": "1e8c25a0-541a-4aed-a096-e88bd0514ff1",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "iH5YgFw4JqYFpzj0",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        528,
+        448
+      ],
+      "id": "46549148-18f5-417f-81ca-433eb725ec76",
+      "name": "Split commenti"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {
+          "maxTokensToSample": 400,
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        2296,
+        32
+      ],
+      "id": "014165db-19fa-40b6-ab78-f37e2b550e3c",
+      "name": "Anthropic Chat Model1",
+      "credentials": {
+        "anthropicApi": {
+          "id": "iH5YgFw4JqYFpzj0",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_SLACK_WEBHOOK_FAQ",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"💡 FAQ — bozza pronta\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*{{ $json.author }}* · 👍 {{ $json.likeCount }} · 💬 {{ $json.totalReplies }} risposte\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Commento originale:*\\n>>> {{ $json.text }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*✍️ Bozza di risposta (click per copiare):*\\n```{{ $json.replyDraft || '⚠️ AI non ha generato bozza' }}```\"\n      }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"🤖 Reply confidence: *{{ Math.round($json.replyConfidence * 100) }}%* · _{{ $json.replyRationale }}_\"\n        }\n      ]\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"🔗 Apri su YouTube per rispondere\" },\n          \"style\": \"primary\",\n          \"url\": \"https://www.youtube.com/watch?v={{ $json.videoId }}&lc={{ $json.commentId }}\"\n        }\n      ]\n    },\n    { \"type\": \"divider\" }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2288,
+        640
+      ],
+      "id": "c0c1476c-f0a8-4bdc-9bb6-d207604044a3",
+      "name": "slack FAQ"
+    },
+    {
+      "parameters": {
+        "numberInputs": 6
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2800,
+        -148
+      ],
+      "id": "7e6bb8d7-9f37-4284-8f98-529a589d08ba",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "tableId": "comment_classifications",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "comment_id",
+              "fieldValue": "={{ $json.commentId }}"
+            },
+            {
+              "fieldId": "thread_id",
+              "fieldValue": "={{ $json.threadId }}"
+            },
+            {
+              "fieldId": "video_id",
+              "fieldValue": "={{ $json.videoId }}"
+            },
+            {
+              "fieldId": "category",
+              "fieldValue": "={{ $json.category }}"
+            },
+            {
+              "fieldId": "confidence",
+              "fieldValue": "={{ $json.confidence }}"
+            },
+            {
+              "fieldId": "reasoning",
+              "fieldValue": "={{ $json.reasoning }}"
+            },
+            {
+              "fieldId": "reply_draft",
+              "fieldValue": "={{ $json.replyDraft }}"
+            },
+            {
+              "fieldId": "reply_confidence",
+              "fieldValue": "={{ $json.replyConfidence }}"
+            },
+            {
+              "fieldId": "reply_rationale",
+              "fieldValue": "={{ $json.replyRationale }}"
+            },
+            {
+              "fieldId": "reply_generated_at",
+              "fieldValue": "={{ $json.replyGeneratedAt }}"
+            },
+            {
+              "fieldId": "text",
+              "fieldValue": "={{ $json.text }}"
+            },
+            {
+              "fieldId": "text_html",
+              "fieldValue": "={{ $json.textHtml }}"
+            },
+            {
+              "fieldId": "author",
+              "fieldValue": "={{ $json.author }}"
+            },
+            {
+              "fieldId": "author_channel_id",
+              "fieldValue": "={{ $json.authorChannelId }}"
+            },
+            {
+              "fieldId": "author_channel_url",
+              "fieldValue": "={{ $json.authorChannelUrl }}"
+            },
+            {
+              "fieldId": "like_count",
+              "fieldValue": "={{ $json.likeCount }}"
+            },
+            {
+              "fieldId": "total_replies",
+              "fieldValue": "={{ $json.totalReplies }}"
+            },
+            {
+              "fieldId": "published_at",
+              "fieldValue": "={{ $json.publishedAt }}"
+            },
+            {
+              "fieldId": "classified_at",
+              "fieldValue": "={{ $json.classifiedAt }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3024,
+        324
+      ],
+      "id": "0c9b03a9-61e6-4555-ae0c-3ed94f695898",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "flupo7385JRv6i7H",
+          "name": "supabase mirko-portfolio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2288,
+        256
+      ],
+      "id": "96cf6446-e0af-4588-a07f-ace9fd49c040",
+      "name": "Aggregate  ops"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tutti i record recenti (per il breakdown header E per la lista feedback/other)\nconst allClassified = $('filter recent').all().map(item => item.json);\n\nif (allClassified.length === 0) return [];\n\nconst feedbacks = allClassified.filter(i => i.category === 'feedback');\nconst others = allClassified.filter(i => i.category === 'other');\nconst sponsors = allClassified.filter(i => i.category === 'sponsor');\nconst faqs = allClassified.filter(i => i.category === 'FAQ');\nconst spams = allClassified.filter(i => i.category === 'spam');\nconst acknowledges = allClassified.filter(i => i.category === 'acknowledge');\n\nconst totalProcessed = allClassified.length;\nconst needAttention = feedbacks.length + others.length + sponsors.length + faqs.length;\nconst filtered = spams.length + acknowledges.length;\n\nif (feedbacks.length === 0 && others.length === 0) return [];\n\nfunction commentBlock(item) {\n  const videoId = item.video_id;\n  const commentId = item.comment_id;\n  const author = item.author || 'unknown';\n  const likeCount = item.like_count ?? 0;\n  const text = (item.text || '').slice(0, 280);\n\n  const ytLink = (videoId && commentId)\n    ? `https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`\n    : 'https://www.youtube.com';\n\n  return {\n    type: 'section',\n    text: {\n      type: 'mrkdwn',\n      text: `*${author}* · 👍 ${likeCount}\\n>>> ${text}\\n<${ytLink}|🔗 Apri commento>`\n    }\n  };\n}\n\nconst blocks = [];\n\nblocks.push({\n  type: 'header',\n  text: {\n    type: 'plain_text',\n    text: `📊 ${totalProcessed} processati · ${needAttention} richiedono attenzione · ${filtered} filtrati`\n  }\n});\n\nblocks.push({\n  type: 'section',\n  text: {\n    type: 'mrkdwn',\n    text:\n      `*${feedbacks.length}* feedback · *${others.length}* da gestire · *${faqs.length}* FAQ con bozza · *${sponsors.length}* sponsor\\n` +\n      `_Filtrati: ${spams.length} spam · ${acknowledges.length} acknowledge_`\n  }\n});\n\nblocks.push({ type: 'divider' });\n\nif (feedbacks.length > 0) {\n  blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*💬 Feedback (${feedbacks.length})*` } });\n  const TOP = 10;\n  for (const item of feedbacks.slice(0, TOP)) blocks.push(commentBlock(item));\n  if (feedbacks.length > TOP) {\n    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `_… e altri ${feedbacks.length - TOP} feedback — dettaglio in Supabase_` }] });\n  }\n}\n\nif (others.length > 0) {\n  blocks.push({ type: 'divider' });\n  blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*❓ Other (${others.length})*` } });\n  const TOP = 10;\n  for (const item of others.slice(0, TOP)) blocks.push(commentBlock(item));\n  if (others.length > TOP) {\n    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `_… e altri ${others.length - TOP} other — dettaglio in Supabase_` }] });\n  }\n}\n\nblocks.push({ type: 'divider' });\nblocks.push({\n  type: 'context',\n  elements: [{\n    type: 'mrkdwn',\n    text: `🤖 Comment Triage Agent · ${new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' })}`\n  }]\n});\n\nreturn { json: { blocks } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        256
+      ],
+      "id": "babef06f-732a-45ac-8988-b4cf2de373b4",
+      "name": "Code digest ops"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_SLACK_WEBHOOK_OPS",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=\t{\"blocks\": {{ JSON.stringify($json.blocks) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2800,
+        256
+      ],
+      "id": "ff117888-984f-426f-9032-647e6f85d034",
+      "name": "Slack ops"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allClassified = $('filter recent').all().map(item => item.json);\n\nif (allClassified.length === 0) return [];\n\nconst sponsors = allClassified.filter(i => i.category === 'sponsor');\nif (sponsors.length === 0) return [];\n\nconst totalProcessed = allClassified.length;\n\nconst blocks = [];\n\nblocks.push({\n  type: 'header',\n  text: { type: 'plain_text', text: `🤝 Sponsorship inquiries — ${sponsors.length} nuove` }\n});\n\nblocks.push({\n  type: 'section',\n  text: {\n    type: 'mrkdwn',\n    text: `*${sponsors.length}* opportunità da qualificare · ${totalProcessed} commenti totali nel batch`\n  }\n});\n\nblocks.push({ type: 'divider' });\n\nfor (const item of sponsors) {\n  const videoId = item.video_id;\n  const commentId = item.comment_id;\n  const author = item.author || 'unknown';\n  const likeCount = item.like_count ?? 0;\n  const text = (item.text || '').slice(0, 500);\n  const reasoning = item.reasoning;\n  const authorChannelUrl = item.author_channel_url || 'https://youtube.com';\n\n  const ytLink = (videoId && commentId)\n    ? `https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`\n    : 'https://www.youtube.com';\n\n  blocks.push({\n    type: 'section',\n    text: { type: 'mrkdwn', text: `*${author}* · 👍 ${likeCount}\\n>>> ${text}` }\n  });\n\n  if (reasoning) {\n    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `🤖 _${reasoning}_` }] });\n  }\n\n  blocks.push({\n    type: 'actions',\n    elements: [\n      { type: 'button', text: { type: 'plain_text', text: '🔗 Apri commento' }, url: ytLink },\n      { type: 'button', text: { type: 'plain_text', text: '👤 Canale del brand' }, style: 'primary', url: authorChannelUrl }\n    ]\n  });\n\n  blocks.push({ type: 'divider' });\n}\n\nblocks.push({\n  type: 'context',\n  elements: [{\n    type: 'mrkdwn',\n    text: `🤖 Comment Triage Agent · ${new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' })}`\n  }]\n});\n\nreturn { json: { blocks } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        448
+      ],
+      "id": "61cc3896-5229-40ca-9253-a64cffde3d4a",
+      "name": "Code digest biz"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_SLACK_WEBHOOK_BIZ",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"blocks\": {{ JSON.stringify($json.blocks) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2800,
+        448
+      ],
+      "id": "756660e5-6f2d-41e5-9778-2db0330ae10c",
+      "name": "Slack biz"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        80,
+        448
+      ],
+      "id": "a7c3e01d-0c0a-4763-9964-4ff7ba3d7a1a",
+      "name": "Limit1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={\n  \"comment_id\": \"{{ $json.snippet.topLevelComment.id }}\",\n  \"thread_id\": \"{{ $json.id }}\",\n  \"video_id\": \"{{ $json.snippet.videoId }}\",\n  \"author\": \"{{ $json.snippet.topLevelComment.snippet.authorDisplayName }}\",\n  \"author_channel_url\": \"{{ $json.snippet.topLevelComment.snippet.authorChannelUrl }}\",\n  \"like_count\": {{ $json.snippet.topLevelComment.snippet.likeCount }},\n  \"total_replies\": {{ $json.snippet.totalReplyCount }},\n  \"text\": {{ JSON.stringify($json.snippet.topLevelComment.snippet.textOriginal) }},\n  \"text_html\": {{ JSON.stringify($json.snippet.topLevelComment.snippet.textDisplay) }}\n}",
+        "options": {
+          "systemMessage": "Sei un classificatore di commenti YouTube per un creator.\n\nProfilo del creator:\n- Nicchia: tech tutorial / coding\n- Tono: amichevole, diretto, no jargon\n- Lingue: italiano, inglese\n\nINPUT\nRiceverai un singolo commento come oggetto JSON con questi campi:\n- \"text\": testo grezzo del commento (segnale principale)\n- \"text_html\": stesso testo con HTML — utile per rilevare link che nel testo grezzo non si vedono\n- \"author\": display name dell'autore\n- \"author_channel_url\": URL del canale dell'autore\n- \"like_count\": numero di like al commento (intero)\n- \"total_replies\": numero di risposte sotto il commento (intero)\n- \"comment_id\", \"thread_id\", \"video_id\": identifier opachi (ignorali per la classificazione)\n\nDECISION TREE\nApplica IN ORDINE — la prima regola che matcha vince.\n\n1. Link sospetti, promozioni esterne, scam, pattern bot → \"spam\"\n2. Brand outreach, proposta partnership/collaborazione, email business → \"sponsor\"\n3. Domanda generica frequente (gear, software, link, dove comprare) → \"FAQ\"\n4. Commento contenente UNA delle seguenti (anche se breve, gentile o accompagnato da complimenti) → \"feedback\":\n   (a) RICHIESTA DI CONTENUTO FUTURO — \"you should do X\", \"please review Y\", \"can you cover Z\", \"make a video on…\"\n   (b) SUGGERIMENTO SUL FORMAT del canale — \"there should be a section for X\", \"add timestamps in the description\", \"consider doing weekly Q&A\"\n   (c) SEGNALAZIONE DI ERRORE nel video — refusi, errori fattuali, sequenze sbagliate, problemi audio/editing/sync, b-roll sbagliato. Esempi: \"the checklist order is swapped at 4:20\", \"you said 'watermark' instead of 'benchmark'\", \"the audio cuts at 5:00\"\n   (d) Altre richieste azionabili concrete (suggerimento pratico con azione chiara)\n5. Lingua diversa da IT/EN, commento ambiguo, domanda specifica non-FAQ che richiede risposta umana, riferimenti criptici → \"other\"\n6. DEFAULT (apprezzamento, hype, battuta, reazione, complimento generico, commento su timestamp SENZA richiesta/segnalazione) → \"acknowledge\"\n\nCATEGORIE — DEFINIZIONI ED ESEMPI\n\n\"spam\"\nBot, link spam, promozioni non richieste, scam, contenuto offensivo, totalmente irrilevante.\nEsempi:\n- \"Check my channel for amazing content!\"\n- \"🎁 FREE iPhone GIVEAWAY — click profile\"\n- \"I made $5000 last month using THIS method, link in bio\"\n- \"Crypto pumper recommends $XYZ to the moon 🚀\"\n- \"Hot singles in your area waiting\"\n\n\"sponsor\"\nOutreach commerciale da brand, proposta collaborazione/partnership/integrazione paid.\nEsempi:\n- \"Hi! We're from BrandX, would love to sponsor your channel\"\n- \"I represent CompanyY, can we send you our new product for review?\"\n- \"BrandZ here — open to a paid integration?\"\n- \"We'd love to discuss a partnership, please reach me at sponsor@brand.com\"\n\n\"FAQ\"\nDomanda comune e generica con risposta standard (gear, software, setup, dove comprare).\nEsempi:\n- \"what camera do you use?\"\n- \"what's your editing software?\"\n- \"what microphone is that?\"\n- \"where can I buy the desk in the background?\"\n- \"what's your monitor model?\"\n\n\"feedback\"\nCommenti AZIONABILI per il creator.\n\nINCLUSIONI OBBLIGATORIE — sono SEMPRE feedback, anche se brevi/gentili/educati:\n\n(a) Richieste di contenuto futuro:\n- \"you should do a video on the new Sony A7V\"\n- \"please review Davinci Resolve 19 next\"\n- \"can you cover keyboard switches?\"\n- \"make a tutorial on color grading please\"\n- \"a comparison between X and Y would be great\"\n\n(b) Suggerimenti sul format del canale:\n- \"there should be a dedicated section for keyboard reviews\"\n- \"add timestamps in the description please\"\n- \"would be great if you posted weekly instead of monthly\"\n- \"you should have a discord for the community\"\n\n(c) Segnalazioni di errori nel video:\n- \"the checklist order is swapped at 4:20\"\n- \"you said 'watermark' instead of 'benchmark' at 2:30\"\n- \"the b-roll from 3:00 is the same as 1:00\"\n- \"audio is out of sync at 5:00\"\n- \"typo in the title card\"\n- \"the spec sheet you showed has the wrong RAM amount\"\n\n(d) Altri suggerimenti pratici con azione chiara:\n- \"you should slow down the cuts, they're jarring\"\n- \"please add subtitles, accessibility matters\"\n\nLa cortesia, la brevità, o l'accompagnamento con complimenti NON degradano un feedback ad acknowledge. Se c'è UNA delle inclusioni sopra, è feedback.\n\n\"other\"\nCommenti ambigui, in altre lingue (non IT/EN), domande specifiche non-FAQ che richiedono risposta umana personalizzata, riferimenti criptici, casi non chiaramente assegnabili.\nEsempi:\n- commento in hindi/cinese/arabo\n- \"perché hai scelto il Sony A7IV invece del Canon R6 per QUESTO specifico shot?\" (domanda specifica, non FAQ)\n- riferimento criptico a un evento esterno\n- meme reference oscura\n- frase incompleta o senza contesto chiaro\n\n\"acknowledge\" — DEFAULT\nOgni commento NON azionabile e SENZA richieste/segnalazioni. Complimenti generici, hype, battute, reazioni positive, complimenti su un dettaglio (color grading, audio quality) SENZA richiesta di modifica, commenti su un timestamp che esprimono solo reazione, citazioni/quote del video.\nEsempi:\n- \"great video\"\n- \"first\"\n- \"🔥🔥🔥\"\n- \"props to the color grading\"\n- \"underrated channel ❤️\"\n- \"this is a damn continent\" (battuta)\n- \"Nothing was harmed in this video\" (battuta)\n- \"saying ugly on nothing phone was diabolical\" (reazione a timestamp, no action)\n- \"We didn't settle, brands did\" (battuta/osservazione)\n- \"I love the part at 3:20\" (apprezzamento su timestamp, no action)\n\nDISTINZIONE CRITICA — \"feedback\" vs \"acknowledge\"\nLa differenza è AZIONABILITÀ. Tono cortese o brevità NON spostano la categoria.\n\nCoppie border case con risoluzione esplicita:\n\nApprezzamento puro vs richiesta:\n- \"love your content, keep it up!\" → acknowledge (no request)\n- \"love your content! please do one on Davinci Resolve next\" → feedback (request: content Davinci)\n\nComplimento puro vs error report:\n- \"great review!\" → acknowledge\n- \"great review! you said 'watermark' at 2:30 but meant 'benchmark'\" → feedback (error: typo to correct)\n\nHype vs suggerimento format:\n- \"your channel is the best\" → acknowledge\n- \"your channel is the best, you should add timestamps in description\" → feedback (format suggestion)\n\nReazione timestamp vs segnalazione:\n- \"I love the part at 3:20\" → acknowledge (apprezzamento)\n- \"the part at 3:20 needs better lighting\" → feedback (azione: fix lighting)\n- \"audio is choppy at 3:20\" → feedback (segnalazione audio)\n\nComplimento gear vs feedback su gear:\n- \"great audio quality\" → acknowledge\n- \"the audio at 3:20 has a popping noise\" → feedback (segnalazione audio)\n\nGenerico vs richiesta futura:\n- \"amazing tutorial!\" → acknowledge\n- \"amazing tutorial! you should do one on advanced Python next\" → feedback (request: content Python)\n\nTIE-BREAKER RULES\n1. Se hai dubbi tra \"feedback\" e \"acknowledge\" SENZA che il commento contenga una delle inclusioni obbligatorie (a/b/c) → scegli \"acknowledge\".\n2. ECCEZIONE: se il commento contiene UNA delle inclusioni obbligatorie (richiesta contenuto futuro, suggerimento format, segnalazione errore) — anche solo accennata, anche dentro a un complimento più lungo — è SEMPRE \"feedback\", indipendentemente da tono o brevità.\n3. Se hai dubbi tra qualsiasi categoria specifica e \"other\" → scegli \"other\".\n\nCOME USARE I SEGNALI METADATA\n- like_count > 5 AND total_replies > 0 → quasi mai spam\n- author con pattern spam (numeri casuali, \"promo\", \"earn\", \"crypto\", \"pumper\") → bias spam\n- text_html con link esterni che text non mostra → segnale spam forte\n- like_count alto su commento breve e generico → tipicamente acknowledge popolare (battuta o quote del video)\n\nOUTPUT\nRispondi ESCLUSIVAMENTE con un oggetto JSON valido in questo schema:\n{\n  \"category\": \"spam\" | \"sponsor\" | \"FAQ\" | \"feedback\" | \"other\" | \"acknowledge\",\n  \"confidence\": 0.0-1.0,\n  \"reasoning\": \"una frase breve. Se scegli 'feedback', SPECIFICA quale tipo (a/b/c/d) e quale azione concreta il creator può fare. Se scegli 'acknowledge', conferma che NON ci sono richieste/segnalazioni nascoste.\"\n}\n\nNiente markdown, niente code fences, niente testo prima o dopo. Inizia direttamente con `{`."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1424,
+        -84
+      ],
+      "id": "198348e9-c507-4f4b-b228-448d1a7e3717",
+      "name": "Classify comment"
+    },
+    {
+      "parameters": {
+        "jsCode": "const processedIds = new Set(\n  $('Get processed IDs').all().map(item => item.json.comment_id)\n);\n\nconst allItems = $input.all();\nconst newItems = [];\n\nfor (let i = 0; i < allItems.length; i++) {\n  const item = allItems[i];\n  const cid = item.json.snippet.topLevelComment.id;\n  if (!processedIds.has(cid)) {\n    newItems.push({\n      json: item.json,\n      pairedItem: { item: i }   // ← la riga che mancava\n    });\n  }\n}\n\nconsole.log(\n  `Dedup: ${allItems.length} scaricati · ${newItems.length} nuovi · ${allItems.length - newItems.length} skippati`\n);\n\nreturn newItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        448
+      ],
+      "id": "a13ebcab-0e67-4421-bfe6-e9499581b923",
+      "name": "filter new comment"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "comment_classifications",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        448
+      ],
+      "id": "8394194d-f754-4212-af27-19fd2ecebc76",
+      "name": "Get processed IDs",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "flupo7385JRv6i7H",
+          "name": "supabase mirko-portfolio"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "batchSize": 15,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        976,
+        448
+      ],
+      "id": "5738daeb-1652-4ecf-b570-d9a65dc1edc7",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "amount": 40
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        -84
+      ],
+      "id": "919764e7-2658-4ba5-8fc5-49f4458a375a",
+      "name": "Wait",
+      "webhookId": "351f495b-0d3a-41ca-9277-21051d4e6d2e"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Parse classification1').item.json.category }}",
+                    "rightValue": "feedback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "d339371c-2e31-4206-950e-9ae02102dceb"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1a23eee2-d719-4079-b408-749899abb3ca",
+                    "leftValue": "={{ $('Parse classification1').item.json.category }}",
+                    "rightValue": "sponsor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2beb85f1-876a-49d1-a695-aa98c771fecc",
+                    "leftValue": "={{ $('Parse classification1').item.json.category }}",
+                    "rightValue": "faq",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4e7cbb4d-44fc-4ed7-9aaf-43af06d54ea0",
+                    "leftValue": "={{ $('Parse classification1').item.json.category }}",
+                    "rightValue": "other",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none",
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2000,
+        416
+      ],
+      "id": "bf48338d-3872-4927-9359-7b3fffd6baeb",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2288,
+        448
+      ],
+      "id": "11f59c8a-a7ff-47c0-8148-18613aa0c2ef",
+      "name": "Aggregate biz"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 1. Parsing della risposta dell'AI Agent\nconst aiText = $input.item.json.output;\n\nlet classification;\ntry {\n  classification = JSON.parse(aiText);\n} catch (e) {\n  throw new Error(\n    `AI Agent non ha restituito JSON valido. Output ricevuto: ${aiText.slice(0, 300)}`\n  );\n}\n\n// 2. Recupero dei campi originali del commento via paired items\nconst original = $('Split commenti').item.json;\nconst snippet = original.snippet.topLevelComment.snippet;\n\n// 3. Flat object con SCHEMA COMPLETO (reply_* a null per i non-FAQ)\nreturn {\n  json: {\n    category: classification.category,\n    confidence: classification.confidence,\n    reasoning: classification.reasoning,\n\n    commentId: original.snippet.topLevelComment.id,\n    threadId: original.id,\n    videoId: original.snippet.videoId,\n\n    text: snippet.textOriginal,\n    textHtml: snippet.textDisplay,\n    author: snippet.authorDisplayName,\n    authorChannelId: snippet.authorChannelId?.value ?? null,\n    authorChannelUrl: snippet.authorChannelUrl,\n    publishedAt: snippet.publishedAt,\n    likeCount: snippet.likeCount,\n    totalReplies: original.snippet.totalReplyCount,\n\n    classifiedAt: new Date().toISOString(),\n\n    // Placeholder per il branch FAQ — popolati solo da Parse FAQ reply\n    replyDraft: null,\n    replyConfidence: null,\n    replyRationale: null,\n    replyGeneratedAt: null,\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        -84
+      ],
+      "id": "5a7ff8f9-27e8-4a0e-a806-6c0e0b9ca7a5",
+      "name": "Parse classification1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "feedback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "6148d792-6701-4196-97df-6c26667f3a4d"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "34c4227e-67ff-4661-81a3-15568d096b5c",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "spam",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "803982f5-df91-4ceb-b095-34e70a58f328",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "FAQ",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8594e28e-a748-44ef-ba9e-fa39a0c5f2f5",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "sponsor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9b9711c8-0fae-4372-bb48-f197b8aec3e1",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "other",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "52f68390-93ed-4af1-b2d4-f66309c42b95",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "acknowledge",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none",
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2000,
+        -148
+      ],
+      "id": "bb5a804f-08c0-4dce-a3d2-6f8b5f767246",
+      "name": "Route by category"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 1. Parsing della risposta dell'AI Agent #2 (Generate FAQ reply)\nconst aiText = $input.item.json.output;\n\nlet reply;\ntry {\n  reply = JSON.parse(aiText);\n} catch (e) {\n  throw new Error(\n    `Generate FAQ reply non ha restituito JSON valido. Output ricevuto: ${aiText.slice(0, 300)}`\n  );\n}\n\n// 2. Recupero del flat object già preparato da Parse classification\nconst classified = $('Route by category').item.json;\n\n// 3. Spread del flat object + aggiunta dei 3 campi della bozza\nreturn {\n  json: {\n    ...classified,\n    replyDraft: reply.reply_draft ?? '',\n    replyConfidence: reply.confidence ?? 0,\n    replyRationale: reply.rationale ?? '',\n    replyGeneratedAt: new Date().toISOString(),\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        -192
+      ],
+      "id": "3a78c0a9-0156-4f75-94e7-a47c23a12e7c",
+      "name": "Parse FAQ reply"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={\n  \"comment_id\": \"{{ $json.commentId }}\",\n  \"video_id\": \"{{ $json.videoId }}\",\n  \"author\": \"{{ $json.author }}\",\n  \"like_count\": {{ $json.likeCount }},\n  \"text\": {{ JSON.stringify($json.text) }}\n}",
+        "options": {
+          "systemMessage": "Sei l'assistente di risposta ai commenti del creator YouTube.\n\nProfilo del creator:\n- Nicchia: tech tutorial / coding\n- Tono: amichevole, diretto, no jargon, usa al massimo 1 emoji per risposta\n- Lingue: rispondi nella STESSA lingua del commento (italiano o inglese, riconoscila dal testo)\n- Forma: usa \"tu\" informale, mai \"Lei\"\n\nINPUT\nRiceverai un commento YouTube classificato come FAQ (domanda comune del pubblico).\n\nCOMPITO\nGenera una bozza di risposta breve, max 2 frasi e 280 caratteri totali, che:\n1. Risponda con utilità reale alla domanda\n2. Suggerisca dove approfondire (descrizione del video, video precedenti, playlist canale)\n3. Mantenga il tono del creator\n4. NON inventi link, titoli di video, o risorse specifiche (NON hai accesso al knowledge base reale del creator: usa solo \"descrizione\", \"video precedenti\", \"playlist sul canale\" come riferimenti generici)\n5. NON saluti con \"Ciao [nome]\" — vai diretto sulla risposta\n6. NON usi markdown (no asterischi, no link [testo](url) — YouTube li renderizza come testo)\n\nOUTPUT\nRispondi ESCLUSIVAMENTE con un oggetto JSON valido in questo schema:\n{\n  \"reply_draft\": \"il testo della risposta\",\n  \"confidence\": 0.0-1.0,\n  \"rationale\": \"in una frase: perché questa risposta è appropriata per questo commento\"\n}\n\nEDGE CASE\nSe il commento non è realmente una FAQ (es. è troppo specifico, off-topic, o richiede info che non hai), restituisci:\n{\n  \"reply_draft\": \"\",\n  \"confidence\": 0.0,\n  \"rationale\": \"spiegazione del perché non puoi generare una risposta utile\"\n}\n\nIl workflow a valle gestirà il caso reply_draft vuoto (skip della pubblicazione).\n\nNiente markdown, niente code fences. Inizia direttamente con `{`."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2224,
+        -192
+      ],
+      "id": "811d8518-36ee-4e42-ad23-b7a0e84c7c3e",
+      "name": "Generate FAQ reply"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "comment_classifications",
+        "returnAll": true,
+        "filterType": "none"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        448
+      ],
+      "id": "bb102ec1-5007-4df7-bfe2-802a6c65913f",
+      "name": "Get current run records",
+      "credentials": {
+        "supabaseApi": {
+          "id": "flupo7385JRv6i7H",
+          "name": "supabase mirko-portfolio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cutoff = new Date(Date.now() - 15 * 60 * 1000).getTime();\n\nconst recent = $input.all().filter(item =>\n  item.json.classified_at &&\n  new Date(item.json.classified_at).getTime() > cutoff\n);\n\nconsole.log(`Filter Recent: ${$input.all().length} totali in DB → ${recent.length} recenti`);\n\nreturn recent;;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        448
+      ],
+      "id": "8e65eff9-a9cb-40e8-9219-60f6559c2a8f",
+      "name": "filter recent"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        448
+      ],
+      "id": "a4a0f563-97c5-4c1e-bba7-415146cca7cf",
+      "name": "Limit"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get processed IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Split commenti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify comment",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split commenti": {
+      "main": [
+        [
+          {
+            "node": "filter new comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate FAQ reply",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "slack FAQ": {
+      "main": [
+        []
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate  ops": {
+      "main": [
+        [
+          {
+            "node": "Code digest ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code digest ops": {
+      "main": [
+        [
+          {
+            "node": "Slack ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code digest biz": {
+      "main": [
+        [
+          {
+            "node": "Slack biz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify comment": {
+      "main": [
+        [
+          {
+            "node": "Parse classification1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter new comment": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get processed IDs": {
+      "main": [
+        [
+          {
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Classify comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Aggregate  ops",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate biz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "slack FAQ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate  ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate biz": {
+      "main": [
+        [
+          {
+            "node": "Code digest biz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse classification1": {
+      "main": [
+        [
+          {
+            "node": "Route by category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by category": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ],
+        [
+          {
+            "node": "Generate FAQ reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "Parse FAQ reply": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate FAQ reply": {
+      "main": [
+        [
+          {
+            "node": "Parse FAQ reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get current run records": {
+      "main": [
+        [
+          {
+            "node": "filter recent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter recent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Get current run records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "106c76c8-aa63-421d-856f-580474e48a99",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "81e9de9ac0f05457e40df61192cc89534eacf14e3a5eb63aef82640ff8314273"
+  },
+  "id": "Tft4lM4sHOUemrn0",
+  "tags": []
+}

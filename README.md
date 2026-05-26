@@ -105,6 +105,8 @@ If you're forking this to deploy on your own infrastructure:
 - Slack webhook URLs are channel-scoped — keep them in workflow Variables (Settings → Variables), not in the exported `workflow.json` body.
 - Schedule the workflow at an interval longer than its execution time (typically 5–10 minutes for a 1,000-comment batch with the rate-limit-respecting Wait).
 
+This is a reference build tuned for channels up to ~100 comments per run. Higher-volume setups (viral videos, 1M+ sub channels) need additional engineering — happy to scope that on a call.
+
 ## Setup
 
 See [docs/setup.md](docs/setup.md).

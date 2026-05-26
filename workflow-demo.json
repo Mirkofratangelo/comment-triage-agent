@@ -1,0 +1,1165 @@
+{
+  "name": "comment triage agent (demo)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        448
+      ],
+      "id": "aab92486-3b70-4a2c-b1d3-36ed059e4483",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/commentThreads",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "YOUR_YOUTUBE_API_KEY"
+            },
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "videoId",
+              "value": "YOUR_VIDEO_ID"
+            },
+            {
+              "name": "maxResults",
+              "value": "100"
+            },
+            {
+              "name": "order",
+              "value": "relevance"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        304,
+        448
+      ],
+      "id": "c00e49dd-e6e1-4216-8659-a000f6a7fb1d",
+      "name": "HTTP Request",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {
+          "maxTokensToSample": 300,
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        1496,
+        140
+      ],
+      "id": "1e8c25a0-541a-4aed-a096-e88bd0514ff1",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "iH5YgFw4JqYFpzj0",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        528,
+        448
+      ],
+      "id": "46549148-18f5-417f-81ca-433eb725ec76",
+      "name": "Split commenti"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {
+          "maxTokensToSample": 400,
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        2296,
+        32
+      ],
+      "id": "014165db-19fa-40b6-ab78-f37e2b550e3c",
+      "name": "Anthropic Chat Model1",
+      "credentials": {
+        "anthropicApi": {
+          "id": "iH5YgFw4JqYFpzj0",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_SLACK_WEBHOOK_FAQ",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"💡 FAQ — draft ready\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"*\" + $json.author + \"* · 👍 \" + ($json.like_count ?? 0) + \" · 💬 \" + ($json.total_replies ?? 0) + \" replies\") }}\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"*Original comment:*\\n>>> \" + $json.text) }}\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"*✍️ Draft reply (click to copy):*\\n```\" + ($json.reply_draft || '⚠️ AI did not generate a draft') + \"```\") }}\n      }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": {{ JSON.stringify(\"🤖 Reply confidence: *\" + Math.round(($json.reply_confidence ?? 0) * 100) + \"%* · _\" + ($json.reply_rationale || '') + \"_\") }}\n        }\n      ]\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"🔗 Open on YouTube to reply\" },\n          \"style\": \"primary\",\n          \"url\": \"https://www.youtube.com/watch?v={{ $json.video_id }}&lc={{ $json.comment_id }}\"\n        }\n      ]\n    },\n    { \"type\": \"divider\" }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2288,
+        640
+      ],
+      "id": "c0c1476c-f0a8-4bdc-9bb6-d207604044a3",
+      "name": "slack FAQ"
+    },
+    {
+      "parameters": {
+        "numberInputs": 6
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2800,
+        -148
+      ],
+      "id": "7e6bb8d7-9f37-4284-8f98-529a589d08ba",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "tableId": "comment_classifications",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "comment_id",
+              "fieldValue": "={{ $json.commentId }}"
+            },
+            {
+              "fieldId": "thread_id",
+              "fieldValue": "={{ $json.threadId }}"
+            },
+            {
+              "fieldId": "video_id",
+              "fieldValue": "={{ $json.videoId }}"
+            },
+            {
+              "fieldId": "category",
+              "fieldValue": "={{ $json.category }}"
+            },
+            {
+              "fieldId": "confidence",
+              "fieldValue": "={{ $json.confidence }}"
+            },
+            {
+              "fieldId": "reasoning",
+              "fieldValue": "={{ $json.reasoning }}"
+            },
+            {
+              "fieldId": "reply_draft",
+              "fieldValue": "={{ $json.replyDraft }}"
+            },
+            {
+              "fieldId": "reply_confidence",
+              "fieldValue": "={{ $json.replyConfidence }}"
+            },
+            {
+              "fieldId": "reply_rationale",
+              "fieldValue": "={{ $json.replyRationale }}"
+            },
+            {
+              "fieldId": "reply_generated_at",
+              "fieldValue": "={{ $json.replyGeneratedAt }}"
+            },
+            {
+              "fieldId": "text",
+              "fieldValue": "={{ $json.text }}"
+            },
+            {
+              "fieldId": "text_html",
+              "fieldValue": "={{ $json.textHtml }}"
+            },
+            {
+              "fieldId": "author",
+              "fieldValue": "={{ $json.author }}"
+            },
+            {
+              "fieldId": "author_channel_id",
+              "fieldValue": "={{ $json.authorChannelId }}"
+            },
+            {
+              "fieldId": "author_channel_url",
+              "fieldValue": "={{ $json.authorChannelUrl }}"
+            },
+            {
+              "fieldId": "like_count",
+              "fieldValue": "={{ $json.likeCount }}"
+            },
+            {
+              "fieldId": "total_replies",
+              "fieldValue": "={{ $json.totalReplies }}"
+            },
+            {
+              "fieldId": "published_at",
+              "fieldValue": "={{ $json.publishedAt }}"
+            },
+            {
+              "fieldId": "classified_at",
+              "fieldValue": "={{ $json.classifiedAt }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3024,
+        324
+      ],
+      "id": "0c9b03a9-61e6-4555-ae0c-3ed94f695898",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "flupo7385JRv6i7H",
+          "name": "supabase mirko-portfolio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2288,
+        256
+      ],
+      "id": "96cf6446-e0af-4588-a07f-ace9fd49c040",
+      "name": "Aggregate  ops"
+    },
+    {
+      "parameters": {
+        "jsCode": "// All recent records (used for both the header breakdown AND the feedback/other list)\nconst allClassified = $('filter recent').all().map(item => item.json);\n\nif (allClassified.length === 0) return [];\n\nconst feedbacks = allClassified.filter(i => i.category === 'feedback');\nconst others = allClassified.filter(i => i.category === 'other');\nconst sponsors = allClassified.filter(i => i.category === 'sponsor');\nconst faqs = allClassified.filter(i => i.category === 'FAQ');\nconst spams = allClassified.filter(i => i.category === 'spam');\nconst acknowledges = allClassified.filter(i => i.category === 'acknowledge');\n\nconst totalProcessed = allClassified.length;\nconst needAttention = feedbacks.length + others.length + sponsors.length + faqs.length;\nconst filtered = spams.length + acknowledges.length;\n\nif (feedbacks.length === 0 && others.length === 0) return [];\n\nfunction commentBlock(item) {\n  const videoId = item.video_id;\n  const commentId = item.comment_id;\n  const author = item.author || 'unknown';\n  const likeCount = item.like_count ?? 0;\n  const text = (item.text || '').slice(0, 280);\n\n  const ytLink = (videoId && commentId)\n    ? `https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`\n    : 'https://www.youtube.com';\n\n  return {\n    type: 'section',\n    text: {\n      type: 'mrkdwn',\n      text: `*${author}* · 👍 ${likeCount}\\n>>> ${text}\\n<${ytLink}|🔗 Open comment>`\n    }\n  };\n}\n\nconst blocks = [];\n\nblocks.push({\n  type: 'header',\n  text: {\n    type: 'plain_text',\n    text: `📊 ${totalProcessed} processed · ${needAttention} need attention · ${filtered} filtered`\n  }\n});\n\nblocks.push({\n  type: 'section',\n  text: {\n    type: 'mrkdwn',\n    text:\n      `*${feedbacks.length}* feedback · *${others.length}* to handle · *${faqs.length}* FAQ with draft · *${sponsors.length}* sponsor\\n` +\n      `_Filtered: ${spams.length} spam · ${acknowledges.length} acknowledge_`\n  }\n});\n\nblocks.push({ type: 'divider' });\n\nif (feedbacks.length > 0) {\n  blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*💬 Feedback (${feedbacks.length})*` } });\n  const TOP = 10;\n  for (const item of feedbacks.slice(0, TOP)) blocks.push(commentBlock(item));\n  if (feedbacks.length > TOP) {\n    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `_… and ${feedbacks.length - TOP} more feedback — see Supabase for full detail_` }] });\n  }\n}\n\nif (others.length > 0) {\n  blocks.push({ type: 'divider' });\n  blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*❓ Other (${others.length})*` } });\n  const TOP = 10;\n  for (const item of others.slice(0, TOP)) blocks.push(commentBlock(item));\n  if (others.length > TOP) {\n    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `_… and ${others.length - TOP} more other — see Supabase for full detail_` }] });\n  }\n}\n\nblocks.push({ type: 'divider' });\nblocks.push({\n  type: 'context',\n  elements: [{\n    type: 'mrkdwn',\n    text: `🤖 Comment Triage Agent · ${new Date().toUTCString()}`\n  }]\n});\n\nreturn { json: { blocks } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        256
+      ],
+      "id": "babef06f-732a-45ac-8988-b4cf2de373b4",
+      "name": "Code digest ops"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_SLACK_WEBHOOK_OPS",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=\t{\"blocks\": {{ JSON.stringify($json.blocks) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2800,
+        256
+      ],
+      "id": "ff117888-984f-426f-9032-647e6f85d034",
+      "name": "Slack ops"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allClassified = $('filter recent').all().map(item => item.json);\n\nif (allClassified.length === 0) return [];\n\nconst sponsors = allClassified.filter(i => i.category === 'sponsor');\nif (sponsors.length === 0) return [];\n\nconst totalProcessed = allClassified.length;\n\nconst blocks = [];\n\nblocks.push({\n  type: 'header',\n  text: { type: 'plain_text', text: `🤝 Sponsorship inquiries — ${sponsors.length} new` }\n});\n\nblocks.push({\n  type: 'section',\n  text: {\n    type: 'mrkdwn',\n    text: `*${sponsors.length}* opportunities to qualify · ${totalProcessed} total comments in batch`\n  }\n});\n\nblocks.push({ type: 'divider' });\n\nfor (const item of sponsors) {\n  const videoId = item.video_id;\n  const commentId = item.comment_id;\n  const author = item.author || 'unknown';\n  const likeCount = item.like_count ?? 0;\n  const text = (item.text || '').slice(0, 500);\n  const reasoning = item.reasoning;\n  const authorChannelUrl = item.author_channel_url || 'https://youtube.com';\n\n  const ytLink = (videoId && commentId)\n    ? `https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`\n    : 'https://www.youtube.com';\n\n  blocks.push({\n    type: 'section',\n    text: { type: 'mrkdwn', text: `*${author}* · 👍 ${likeCount}\\n>>> ${text}` }\n  });\n\n  if (reasoning) {\n    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `🤖 _${reasoning}_` }] });\n  }\n\n  blocks.push({\n    type: 'actions',\n    elements: [\n      { type: 'button', text: { type: 'plain_text', text: '🔗 Open comment' }, url: ytLink },\n      { type: 'button', text: { type: 'plain_text', text: '👤 Brand channel' }, style: 'primary', url: authorChannelUrl }\n    ]\n  });\n\n  blocks.push({ type: 'divider' });\n}\n\nblocks.push({\n  type: 'context',\n  elements: [{\n    type: 'mrkdwn',\n    text: `🤖 Comment Triage Agent · ${new Date().toUTCString()}`\n  }]\n});\n\nreturn { json: { blocks } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        448
+      ],
+      "id": "61cc3896-5229-40ca-9253-a64cffde3d4a",
+      "name": "Code digest biz"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_SLACK_WEBHOOK_BIZ",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"blocks\": {{ JSON.stringify($json.blocks) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2800,
+        448
+      ],
+      "id": "756660e5-6f2d-41e5-9778-2db0330ae10c",
+      "name": "Slack biz"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        80,
+        448
+      ],
+      "id": "a7c3e01d-0c0a-4763-9964-4ff7ba3d7a1a",
+      "name": "Limit1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={\n  \"comment_id\": \"{{ $json.snippet.topLevelComment.id }}\",\n  \"thread_id\": \"{{ $json.id }}\",\n  \"video_id\": \"{{ $json.snippet.videoId }}\",\n  \"author\": \"{{ $json.snippet.topLevelComment.snippet.authorDisplayName }}\",\n  \"author_channel_url\": \"{{ $json.snippet.topLevelComment.snippet.authorChannelUrl }}\",\n  \"like_count\": {{ $json.snippet.topLevelComment.snippet.likeCount }},\n  \"total_replies\": {{ $json.snippet.totalReplyCount }},\n  \"text\": {{ JSON.stringify($json.snippet.topLevelComment.snippet.textOriginal) }},\n  \"text_html\": {{ JSON.stringify($json.snippet.topLevelComment.snippet.textDisplay) }}\n}",
+        "options": {
+          "systemMessage": "You are a YouTube comment classifier for a creator.\n\nCreator profile:\n- Niche: tech tutorial / coding\n- Tone: friendly, direct, no jargon\n- Languages: English (primary), Italian (secondary)\n\nINPUT\nYou will receive a single comment as a JSON object with these fields:\n- \"text\": raw comment text (main signal)\n- \"text_html\": same text with HTML — useful for detecting links not visible in plain text\n- \"author\": author's display name\n- \"author_channel_url\": author's channel URL\n- \"like_count\": number of likes on the comment (integer)\n- \"total_replies\": number of replies under the comment (integer)\n- \"comment_id\", \"thread_id\", \"video_id\": opaque identifiers (ignore them for classification)\n\nDECISION TREE\nApply IN ORDER — the first matching rule wins.\n\n1. Suspicious links, external promotions, scams, bot patterns → \"spam\"\n2. Brand outreach, partnership/collaboration proposal, business email → \"sponsor\"\n3. Generic frequent question (gear, software, link, where to buy) → \"FAQ\"\n4. Comment containing ONE of the following (even if brief, polite, or wrapped in compliments) → \"feedback\":\n   (a) FUTURE CONTENT REQUEST — \"you should do X\", \"please review Y\", \"can you cover Z\", \"make a video on…\"\n   (b) CHANNEL FORMAT SUGGESTION — \"there should be a section for X\", \"add timestamps in the description\", \"consider doing weekly Q&A\"\n   (c) ERROR REPORT in the video — typos, factual errors, swapped sequences, audio/editing/sync issues, wrong b-roll. Examples: \"the checklist order is swapped at 4:20\", \"you said 'watermark' instead of 'benchmark'\", \"the audio cuts at 5:00\"\n   (d) Other concrete actionable suggestions (practical suggestion with a clear action)\n5. Language other than EN/IT, ambiguous comment, specific non-FAQ question requiring human reply, cryptic references → \"other\"\n6. DEFAULT (appreciation, hype, joke, reaction, generic compliment, comment on a timestamp WITHOUT request/report) → \"acknowledge\"\n\nCATEGORIES — DEFINITIONS AND EXAMPLES\n\n\"spam\"\nBots, link spam, unsolicited promotions, scams, offensive content, totally irrelevant.\nExamples:\n- \"Check my channel for amazing content!\"\n- \"🎁 FREE iPhone GIVEAWAY — click profile\"\n- \"I made $5000 last month using THIS method, link in bio\"\n- \"Crypto pumper recommends $XYZ to the moon 🚀\"\n- \"Hot singles in your area waiting\"\n\n\"sponsor\"\nCommercial brand outreach, partnership/collaboration/paid integration proposal.\nExamples:\n- \"Hi! We're from BrandX, would love to sponsor your channel\"\n- \"I represent CompanyY, can we send you our new product for review?\"\n- \"BrandZ here — open to a paid integration?\"\n- \"We'd love to discuss a partnership, please reach me at sponsor@brand.com\"\n\n\"FAQ\"\nCommon, generic question with a standard answer (gear, software, setup, where to buy).\nExamples:\n- \"what camera do you use?\"\n- \"what's your editing software?\"\n- \"what microphone is that?\"\n- \"where can I buy the desk in the background?\"\n- \"what's your monitor model?\"\n\n\"feedback\"\nActionable comments for the creator.\n\nMANDATORY INCLUSIONS — these are ALWAYS feedback, even if brief / polite / educated:\n\n(a) Future content requests:\n- \"you should do a video on the new Sony A7V\"\n- \"please review Davinci Resolve 19 next\"\n- \"can you cover keyboard switches?\"\n- \"make a tutorial on color grading please\"\n- \"a comparison between X and Y would be great\"\n\n(b) Channel format suggestions:\n- \"there should be a dedicated section for keyboard reviews\"\n- \"add timestamps in the description please\"\n- \"would be great if you posted weekly instead of monthly\"\n- \"you should have a discord for the community\"\n\n(c) Error reports on the video:\n- \"the checklist order is swapped at 4:20\"\n- \"you said 'watermark' instead of 'benchmark' at 2:30\"\n- \"the b-roll from 3:00 is the same as 1:00\"\n- \"audio is out of sync at 5:00\"\n- \"typo in the title card\"\n- \"the spec sheet you showed has the wrong RAM amount\"\n\n(d) Other practical suggestions with a clear action:\n- \"you should slow down the cuts, they're jarring\"\n- \"please add subtitles, accessibility matters\"\n\nPoliteness, brevity, or being wrapped in compliments do NOT downgrade feedback to acknowledge. If ONE of the inclusions above is present, it is feedback.\n\n\"other\"\nAmbiguous comments, in other languages (non EN/IT), specific non-FAQ questions requiring a personalized human reply, cryptic references, cases not clearly assignable.\nExamples:\n- comment in Hindi/Chinese/Arabic\n- \"why did you pick the Sony A7IV over the Canon R6 for THIS specific shot?\" (specific, not FAQ)\n- cryptic reference to an external event\n- obscure meme reference\n- incomplete sentence or one without clear context\n\n\"acknowledge\" — DEFAULT\nEvery NON actionable comment WITHOUT requests/reports. Generic compliments, hype, jokes, positive reactions, compliments on a detail (color grading, audio quality) WITHOUT modification request, comments on a timestamp expressing only reaction, quotes from the video.\nExamples:\n- \"great video\"\n- \"first\"\n- \"🔥🔥🔥\"\n- \"props to the color grading\"\n- \"underrated channel ❤️\"\n- \"this is a damn continent\" (joke)\n- \"Nothing was harmed in this video\" (joke)\n- \"saying ugly on nothing phone was diabolical\" (reaction to timestamp, no action)\n- \"We didn't settle, brands did\" (joke/observation)\n- \"I love the part at 3:20\" (appreciation of timestamp, no action)\n\nCRITICAL DISTINCTION — \"feedback\" vs \"acknowledge\"\nThe difference is ACTIONABILITY. Polite tone or brevity do NOT shift the category.\n\nBorder case pairs with explicit resolution:\n\nPure appreciation vs request:\n- \"love your content, keep it up!\" → acknowledge (no request)\n- \"love your content! please do one on Davinci Resolve next\" → feedback (request: content Davinci)\n\nPure compliment vs error report:\n- \"great review!\" → acknowledge\n- \"great review! you said 'watermark' at 2:30 but meant 'benchmark'\" → feedback (error: typo to correct)\n\nHype vs format suggestion:\n- \"your channel is the best\" → acknowledge\n- \"your channel is the best, you should add timestamps in description\" → feedback (format suggestion)\n\nTimestamp reaction vs report:\n- \"I love the part at 3:20\" → acknowledge (appreciation)\n- \"the part at 3:20 needs better lighting\" → feedback (action: fix lighting)\n- \"audio is choppy at 3:20\" → feedback (audio report)\n\nGear compliment vs gear feedback:\n- \"great audio quality\" → acknowledge\n- \"the audio at 3:20 has a popping noise\" → feedback (audio report)\n\nGeneric vs future request:\n- \"amazing tutorial!\" → acknowledge\n- \"amazing tutorial! you should do one on advanced Python next\" → feedback (request: content Python)\n\nTIE-BREAKER RULES\n1. If you are uncertain between \"feedback\" and \"acknowledge\" AND the comment does NOT contain one of the mandatory inclusions (a/b/c) → choose \"acknowledge\". The \"feedback\" category is reserved for CLEARLY actionable comments.\n2. EXCEPTION: if the comment contains ONE of the mandatory inclusions (future content request, format suggestion, error report) — even hinted at, even buried inside a longer compliment — it is ALWAYS \"feedback\", regardless of tone or brevity.\n3. If you are uncertain between any specific category and \"other\" → choose \"other\".\n\nHOW TO USE METADATA SIGNALS\n- like_count > 5 AND total_replies > 0 → almost never spam\n- author with spam pattern (random numbers, \"promo\", \"earn\", \"crypto\", \"pumper\") → spam bias\n- text_html with external links that text does not show → strong spam signal\n- high like_count on a brief, generic comment → typically a popular acknowledge (joke or quote from the video)\n\nOUTPUT\nRespond EXCLUSIVELY with a valid JSON object in this schema:\n{\n  \"category\": \"spam\" | \"sponsor\" | \"FAQ\" | \"feedback\" | \"other\" | \"acknowledge\",\n  \"confidence\": 0.0-1.0,\n  \"reasoning\": \"one brief sentence in English. If you choose 'feedback', SPECIFY which type (a/b/c/d) and what concrete action the creator can take. If you choose 'acknowledge', confirm that there are NO hidden requests/reports.\"\n}\n\nNo markdown, no code fences, no text before or after. Start directly with `{`."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1424,
+        -84
+      ],
+      "id": "198348e9-c507-4f4b-b228-448d1a7e3717",
+      "name": "Classify comment"
+    },
+    {
+      "parameters": {
+        "jsCode": "const processedIds = new Set(\n  $('Get processed IDs').all().map(item => item.json.comment_id)\n);\n\nconst allItems = $input.all();\nconst newItems = [];\n\nfor (let i = 0; i < allItems.length; i++) {\n  const item = allItems[i];\n  const cid = item.json.snippet.topLevelComment.id;\n  if (!processedIds.has(cid)) {\n    newItems.push({\n      json: item.json,\n      pairedItem: { item: i }   // ← la riga che mancava\n    });\n  }\n}\n\nconsole.log(\n  `Dedup: ${allItems.length} scaricati · ${newItems.length} nuovi · ${allItems.length - newItems.length} skippati`\n);\n\nreturn newItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        448
+      ],
+      "id": "a13ebcab-0e67-4421-bfe6-e9499581b923",
+      "name": "filter new comment"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "comment_classifications",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        448
+      ],
+      "id": "8394194d-f754-4212-af27-19fd2ecebc76",
+      "name": "Get processed IDs",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "flupo7385JRv6i7H",
+          "name": "supabase mirko-portfolio"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "batchSize": 15,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        976,
+        448
+      ],
+      "id": "5738daeb-1652-4ecf-b570-d9a65dc1edc7",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "amount": 40
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        -84
+      ],
+      "id": "919764e7-2658-4ba5-8fc5-49f4458a375a",
+      "name": "Wait",
+      "webhookId": "351f495b-0d3a-41ca-9277-21051d4e6d2e"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "feedback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "d339371c-2e31-4206-950e-9ae02102dceb"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1a23eee2-d719-4079-b408-749899abb3ca",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "sponsor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2beb85f1-876a-49d1-a695-aa98c771fecc",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "faq",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4e7cbb4d-44fc-4ed7-9aaf-43af06d54ea0",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "other",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none",
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2000,
+        416
+      ],
+      "id": "bf48338d-3872-4927-9359-7b3fffd6baeb",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2288,
+        448
+      ],
+      "id": "11f59c8a-a7ff-47c0-8148-18613aa0c2ef",
+      "name": "Aggregate biz"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 1. Parsing della risposta dell'AI Agent\nconst aiText = $input.item.json.output;\n\nlet classification;\ntry {\n  classification = JSON.parse(aiText);\n} catch (e) {\n  throw new Error(\n    `AI Agent non ha restituito JSON valido. Output ricevuto: ${aiText.slice(0, 300)}`\n  );\n}\n\n// 2. Recupero dei campi originali del commento via paired items\nconst original = $('Split commenti').item.json;\nconst snippet = original.snippet.topLevelComment.snippet;\n\n// 3. Flat object con SCHEMA COMPLETO e null fallback su ogni campo opzionale.\n//    Garantisce che TUTTI gli item abbiano le stesse 19 chiavi sempre presenti\n//    (PostgREST batch insert fallisce se anche solo un campo è undefined invece di null).\nreturn {\n  json: {\n    category: classification.category,\n    confidence: classification.confidence,\n    reasoning: classification.reasoning,\n    commentId: original.snippet.topLevelComment.id,\n    threadId: original.id,\n    videoId: original.snippet.videoId,\n    text: snippet.textOriginal ?? '',\n    textHtml: snippet.textDisplay ?? null,\n    author: snippet.authorDisplayName ?? null,\n    authorChannelId: snippet.authorChannelId?.value ?? null,\n    authorChannelUrl: snippet.authorChannelUrl ?? null,\n    publishedAt: snippet.publishedAt ?? null,\n    likeCount: snippet.likeCount ?? 0,\n    totalReplies: original.snippet.totalReplyCount ?? 0,\n    classifiedAt: new Date().toISOString(),\n    replyDraft: null,\n    replyConfidence: null,\n    replyRationale: null,\n    replyGeneratedAt: null,\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        -84
+      ],
+      "id": "5a7ff8f9-27e8-4a0e-a806-6c0e0b9ca7a5",
+      "name": "Parse classification1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "feedback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "6148d792-6701-4196-97df-6c26667f3a4d"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "34c4227e-67ff-4661-81a3-15568d096b5c",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "spam",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "803982f5-df91-4ceb-b095-34e70a58f328",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "FAQ",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8594e28e-a748-44ef-ba9e-fa39a0c5f2f5",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "sponsor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9b9711c8-0fae-4372-bb48-f197b8aec3e1",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "other",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "52f68390-93ed-4af1-b2d4-f66309c42b95",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "acknowledge",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none",
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2000,
+        -148
+      ],
+      "id": "bb5a804f-08c0-4dce-a3d2-6f8b5f767246",
+      "name": "Route by category"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 1. Parsing della risposta dell'AI Agent #2 (Generate FAQ reply)\nconst aiText = $input.item.json.output;\n\nlet reply;\ntry {\n  reply = JSON.parse(aiText);\n} catch (e) {\n  throw new Error(\n    `Generate FAQ reply non ha restituito JSON valido. Output ricevuto: ${aiText.slice(0, 300)}`\n  );\n}\n\n// 2. Recupero del flat object già preparato da Parse classification\nconst classified = $('Route by category').item.json;\n\n// 3. Una bozza è valida solo se reply_draft non è vuoto\nconst hasDraft = !!(reply.reply_draft && reply.reply_draft.length > 0);\n\n// 4. Mapping esplicito chiave per chiave (stesso ORDINE di Parse classification1).\n//    NON usare ...spread: cambia l'ordine dei campi e fa pignolare PostgREST nei batch insert.\nreturn {\n  json: {\n    category: classified.category,\n    confidence: classified.confidence,\n    reasoning: classified.reasoning,\n    commentId: classified.commentId,\n    threadId: classified.threadId,\n    videoId: classified.videoId,\n    text: classified.text,\n    textHtml: classified.textHtml,\n    author: classified.author,\n    authorChannelId: classified.authorChannelId,\n    authorChannelUrl: classified.authorChannelUrl,\n    publishedAt: classified.publishedAt,\n    likeCount: classified.likeCount,\n    totalReplies: classified.totalReplies,\n    classifiedAt: classified.classifiedAt,\n    replyDraft: hasDraft ? reply.reply_draft : null,\n    replyConfidence: hasDraft ? reply.confidence : null,\n    replyRationale: reply.rationale || null,\n    replyGeneratedAt: hasDraft ? new Date().toISOString() : null,\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        -192
+      ],
+      "id": "3a78c0a9-0156-4f75-94e7-a47c23a12e7c",
+      "name": "Parse FAQ reply"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={\n  \"comment_id\": \"{{ $json.commentId }}\",\n  \"video_id\": \"{{ $json.videoId }}\",\n  \"author\": \"{{ $json.author }}\",\n  \"like_count\": {{ $json.likeCount }},\n  \"text\": {{ JSON.stringify($json.text) }}\n}",
+        "options": {
+          "systemMessage": "You are the reply assistant for a YouTube creator's comments.\n\nCreator profile:\n- Niche: tech tutorial / coding\n- Tone: friendly, direct, no jargon, use at most 1 emoji per reply\n- Reply language: ALWAYS English, regardless of the original comment's language\n- Form: use informal \"you\", never overly formal\n\nINPUT\nYou will receive a YouTube comment classified as FAQ (a common question from the audience).\n\nTASK\nGenerate a brief draft reply, max 2 sentences and 280 total characters, that:\n1. Answers the question with real utility\n2. Suggests where to dig deeper (video description, previous videos, channel playlist)\n3. Maintains the creator's tone\n4. Does NOT invent links, video titles, or specific resources (you do NOT have access to the creator's real knowledge base: use only \"description\", \"previous videos\", \"channel playlist\" as generic references)\n5. Does NOT start with \"Hi [name]\" — get straight to the answer\n6. Does NOT use markdown (no asterisks, no [text](url) links — YouTube renders them as plain text)\n\nOUTPUT\nRespond EXCLUSIVELY with a valid JSON object in this schema:\n{\n  \"reply_draft\": \"the reply text in English\",\n  \"confidence\": 0.0-1.0,\n  \"rationale\": \"in one sentence: why this reply is appropriate for this comment\"\n}\n\nEDGE CASE\nIf the comment is not really a FAQ (e.g. too specific, off-topic, or requires info you don't have), return:\n{\n  \"reply_draft\": \"\",\n  \"confidence\": 0.0,\n  \"rationale\": \"explanation of why you cannot generate a useful reply\"\n}\n\nThe downstream workflow will handle the empty reply_draft case (skip publication).\n\nNo markdown, no code fences. Start directly with `{`."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2224,
+        -192
+      ],
+      "id": "811d8518-36ee-4e42-ad23-b7a0e84c7c3e",
+      "name": "Generate FAQ reply"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "comment_classifications",
+        "returnAll": true,
+        "filterType": "none"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        448
+      ],
+      "id": "bb102ec1-5007-4df7-bfe2-802a6c65913f",
+      "name": "Get current run records",
+      "credentials": {
+        "supabaseApi": {
+          "id": "flupo7385JRv6i7H",
+          "name": "supabase mirko-portfolio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cutoff = new Date(Date.now() - 15 * 60 * 1000).getTime();\n\nconst recent = $input.all().filter(item =>\n  item.json.classified_at &&\n  new Date(item.json.classified_at).getTime() > cutoff\n);\n\nconsole.log(`Filter Recent: ${$input.all().length} totali in DB → ${recent.length} recenti`);\n\nreturn recent;;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        448
+      ],
+      "id": "8e65eff9-a9cb-40e8-9219-60f6559c2a8f",
+      "name": "filter recent"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        448
+      ],
+      "id": "a4a0f563-97c5-4c1e-bba7-415146cca7cf",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test Comments — synthetic comment source for demo\n// Replaces YouTube API HTTP Request to avoid pulling real user data\n// Run mode: Run Once for All Items\n\nfunction makeCommentThread(idx, text, author, likeCount, daysAgo, totalReplies = 0) {\n  const runStart = ($execution && $execution.startedAt) ? $execution.startedAt : new Date().toISOString();\n  const runId = runStart.replace(/[^0-9]/g, '').slice(0, 13);\n  const id = `UgxDemo${String(idx).padStart(4, '0')}_${runId}AaABAg`;\n  const authorChannelId = `UC${String(idx).padStart(6, '0')}DemoChan`;\n\n  const d = new Date(runStart);\n  d.setDate(d.getDate() - daysAgo);\n  d.setHours(Math.floor(Math.random() * 24));\n  d.setMinutes(Math.floor(Math.random() * 60));\n  d.setSeconds(Math.floor(Math.random() * 60));\n  const publishedAt = d.toISOString();\n\n  const textDisplay = text\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n\n  return {\n    kind: 'youtube#commentThread',\n    etag: `etag_demo_${idx}`,\n    id,\n    snippet: {\n      channelId: 'UCDemoChannelTechReviews',\n      videoId: 'demo_video_001',\n      topLevelComment: {\n        kind: 'youtube#comment',\n        etag: `etag_demo_comment_${idx}`,\n        id,\n        snippet: {\n          channelId: 'UCDemoChannelTechReviews',\n          videoId: 'demo_video_001',\n          textDisplay,\n          textOriginal: text,\n          authorDisplayName: author,\n          authorProfileImageUrl: 'https://yt3.ggpht.com/demo-avatar.png',\n          authorChannelUrl: `http://www.youtube.com/${author}`,\n          authorChannelId: { value: authorChannelId },\n          canRate: true,\n          viewerRating: 'none',\n          likeCount,\n          publishedAt,\n          updatedAt: publishedAt\n        }\n      },\n      canReply: true,\n      totalReplyCount: totalReplies,\n      isPublic: true\n    }\n  };\n}\n\nconst substantive = [\n  { text: 'Would love a video on error handling in async Rust — your explanations finally made it click', author: '@dev_alex_rust', likes: 487, days: 3, replies: 18 },\n  { text: 'The pacing in the last tutorial was perfect, more of that please', author: '@code_writer_42', likes: 312, days: 7, replies: 9 },\n  { text: 'Honestly the dependency injection part lost me, maybe slow down there next time', author: '@junior_dev_99', likes: 189, days: 5, replies: 12 },\n  { text: 'Can you do a deep dive on testing strategies for large codebases', author: '@senior_eng_lisa', likes: 645, days: 2, replies: 24 },\n  { text: 'A series on system design interviews would be incredible', author: '@interview_prep_max', likes: 428, days: 10, replies: 31 },\n  { text: 'Your Docker video saved my week at work, thank you for going deep', author: '@devops_carol_k', likes: 372, days: 14, replies: 7 },\n  { text: 'Hi, I represent a developer tools startup and we would love to discuss a sponsored video — what is your rate', author: '@brand_outreach_jake', likes: 3, days: 1, replies: 0 },\n  { text: 'We are a SaaS company looking to partner with creators in the coding space — who can I email', author: '@saas_partnerships_io', likes: 1, days: 6, replies: 0 },\n  { text: 'Brand partnership inquiry — please reach out to partnerships@ourcompany.com', author: '@partner_marie_b', likes: 0, days: 4, replies: 0 },\n  { text: 'What keyboard do you use', author: '@curious_dev_sam', likes: 156, days: 8, replies: 6 },\n  { text: 'Which VS Code theme is that', author: '@theme_hunter_77', likes: 234, days: 12, replies: 14 },\n  { text: 'What laptop specs do you recommend for development', author: '@new_coder_riley', likes: 89, days: 15, replies: 4 },\n  { text: 'Do you have a Discord server', author: '@community_seeker_em', likes: 67, days: 9, replies: 2 },\n  { text: 'What camera was used to film this video', author: '@gear_nerd_paul', likes: 42, days: 11, replies: 3 },\n  { text: 'Is the source code from this video available anywhere', author: '@source_code_hunter', likes: 128, days: 6, replies: 8 },\n  { text: 'Will there be a part 2 to this series', author: '@series_fan_devon', likes: 95, days: 18, replies: 5 },\n  { text: 'The audio cuts out around the 4-minute mark, just so you know', author: '@audio_aware_taylor', likes: 73, days: 4, replies: 11 },\n  { text: 'This is amazing, thank you so much', author: '@grateful_grace_h', likes: 28, days: 2, replies: 0 },\n  { text: 'Great video as always', author: '@regular_viewer_tim', likes: 14, days: 5, replies: 0 },\n  { text: 'Make $5000 a week from home, click my profile', author: '@scam_promo_001', likes: 0, days: 1, replies: 0 }\n];\n\nconst ackTexts = [\n  'First!', 'Underrated channel', '🔥🔥🔥', 'Love this content',\n  'Subscribed!', 'Algorithm brought me here, no regrets', '❤️',\n  '👏 well done', 'Bro speaks facts', 'Amazing as always',\n  'Watching this at 3am, no regrets', 'Came for the title, stayed for the content',\n  'This is gold', 'Quality content as expected', 'Goated',\n  'W content', 'Nice video', 'Banger upload', 'Top tier explanation',\n  'Bookmarking this', 'Liked before watching', 'Algorithm finally got something right',\n  'GOAT', 'Insane production quality', 'POV: you are back to learn',\n  'Notification squad', 'Day 1 subscriber checking in', 'Best tech channel imo',\n  '10/10', '🎯', '🙌', 'Watched twice already', 'Thank you for this',\n  'Cinema', 'Peak content', 'Just wow', 'Speechless', '🚀',\n  'More of this please', 'Top notch'\n];\n\nconst spamTexts = [\n  '🎁 FREE iPhone GIVEAWAY click my channel',\n  'I earned thousands last month using THIS method, link in bio',\n  'Crypto pumper recommends $MOON 🚀🚀🚀',\n  'Hot singles in your area waiting 💋',\n  'Check my channel for amazing content!'\n];\n\nconst items = [];\nlet idx = 1;\n\nfor (const c of substantive) {\n  items.push(makeCommentThread(idx, c.text, c.author, c.likes, c.days, c.replies));\n  idx++;\n}\n\nfor (let i = 0; i < 75; i++) {\n  const text = ackTexts[i % ackTexts.length];\n  const author = `@viewer_${String(i + 1).padStart(3, '0')}`;\n  const likes = Math.floor(Math.random() * 200);\n  const days = Math.floor(Math.random() * 25) + 1;\n  const replies = Math.floor(Math.random() * 3);\n  items.push(makeCommentThread(idx, text, author, likes, days, replies));\n  idx++;\n}\n\nfor (let i = 0; i < 5; i++) {\n  const text = spamTexts[i];\n  const author = `@spam_bot_${String(i + 1).padStart(2, '0')}`;\n  const likes = Math.floor(Math.random() * 3);\n  const days = Math.floor(Math.random() * 7) + 1;\n  items.push(makeCommentThread(idx, text, author, likes, days, 0));\n  idx++;\n}\n\nconsole.log(`Test Comments generated: ${items.length} synthetic comment threads`);\n\nreturn { json: { items } };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        600
+      ],
+      "id": "test01-demo-comments-source-001",
+      "name": "Test Comments"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get processed IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify comment",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split commenti": {
+      "main": [
+        [
+          {
+            "node": "filter new comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate FAQ reply",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "slack FAQ": {
+      "main": [
+        []
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate  ops": {
+      "main": [
+        [
+          {
+            "node": "Code digest ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code digest ops": {
+      "main": [
+        [
+          {
+            "node": "Slack ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code digest biz": {
+      "main": [
+        [
+          {
+            "node": "Slack biz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit1": {
+      "main": [
+        [
+          {
+            "node": "Test Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify comment": {
+      "main": [
+        [
+          {
+            "node": "Parse classification1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter new comment": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get processed IDs": {
+      "main": [
+        [
+          {
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Classify comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Aggregate  ops",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate biz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "slack FAQ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate  ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate biz": {
+      "main": [
+        [
+          {
+            "node": "Code digest biz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse classification1": {
+      "main": [
+        [
+          {
+            "node": "Route by category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by category": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ],
+        [
+          {
+            "node": "Generate FAQ reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "Parse FAQ reply": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate FAQ reply": {
+      "main": [
+        [
+          {
+            "node": "Parse FAQ reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get current run records": {
+      "main": [
+        [
+          {
+            "node": "filter recent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter recent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Get current run records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Comments": {
+      "main": [
+        [
+          {
+            "node": "Split commenti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "106c76c8-aa63-421d-856f-580474e48a99",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "81e9de9ac0f05457e40df61192cc89534eacf14e3a5eb63aef82640ff8314273"
+  },
+  "id": "Tft4lM4sHOUemrn0",
+  "tags": []
+}

@@ -127,7 +127,7 @@
         "url": "YOUR_SLACK_WEBHOOK_FAQ",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"💡 FAQ — draft ready\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"*\" + $json.author + \"* · 👍 \" + $json.likeCount + \" · 💬 \" + $json.totalReplies + \" replies\") }}\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"*Original comment:*\\n>>> \" + $json.text) }}\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"*✍️ Draft reply (click to copy):*\\n```\" + ($json.replyDraft || '⚠️ AI did not generate a draft') + \"```\") }}\n      }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": {{ JSON.stringify(\"🤖 Reply confidence: *\" + Math.round(($json.replyConfidence ?? 0) * 100) + \"%* · _\" + ($json.replyRationale || '') + \"_\") }}\n        }\n      ]\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"🔗 Open on YouTube to reply\" },\n          \"style\": \"primary\",\n          \"url\": \"https://www.youtube.com/watch?v={{ $json.videoId }}&lc={{ $json.commentId }}\"\n        }\n      ]\n    },\n    { \"type\": \"divider\" }\n  ]\n}",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"💡 FAQ — draft ready\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"*\" + $json.author + \"* · 👍 \" + ($json.like_count ?? 0) + \" · 💬 \" + ($json.total_replies ?? 0) + \" replies\") }}\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"*Original comment:*\\n>>> \" + $json.text) }}\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"*✍️ Draft reply (click to copy):*\\n```\" + ($json.reply_draft || '⚠️ AI did not generate a draft') + \"```\") }}\n      }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": {{ JSON.stringify(\"🤖 Reply confidence: *\" + Math.round(($json.reply_confidence ?? 0) * 100) + \"%* · _\" + ($json.reply_rationale || '') + \"_\") }}\n        }\n      ]\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"🔗 Open on YouTube to reply\" },\n          \"style\": \"primary\",\n          \"url\": \"https://www.youtube.com/watch?v={{ $json.video_id }}&lc={{ $json.comment_id }}\"\n        }\n      ]\n    },\n    { \"type\": \"divider\" }\n  ]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -434,7 +434,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $('Parse classification1').item.json.category }}",
+                    "leftValue": "={{ $json.category }}",
                     "rightValue": "feedback",
                     "operator": {
                       "type": "string",
@@ -457,7 +457,7 @@
                 "conditions": [
                   {
                     "id": "1a23eee2-d719-4079-b408-749899abb3ca",
-                    "leftValue": "={{ $('Parse classification1').item.json.category }}",
+                    "leftValue": "={{ $json.category }}",
                     "rightValue": "sponsor",
                     "operator": {
                       "type": "string",
@@ -480,7 +480,7 @@
                 "conditions": [
                   {
                     "id": "2beb85f1-876a-49d1-a695-aa98c771fecc",
-                    "leftValue": "={{ $('Parse classification1').item.json.category }}",
+                    "leftValue": "={{ $json.category }}",
                     "rightValue": "faq",
                     "operator": {
                       "type": "string",
@@ -503,7 +503,7 @@
                 "conditions": [
                   {
                     "id": "4e7cbb4d-44fc-4ed7-9aaf-43af06d54ea0",
-                    "leftValue": "={{ $('Parse classification1').item.json.category }}",
+                    "leftValue": "={{ $json.category }}",
                     "rightValue": "other",
                     "operator": {
                       "type": "string",

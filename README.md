@@ -1,12 +1,27 @@
 # Comment Triage Agent
 
-An n8n workflow that classifies and routes YouTube comments with Claude — turning hours of manual scrolling into a single Slack digest of what actually needs the creator's attention.
+An n8n workflow that turns hundreds of YouTube comments into a clean
+Slack digest of what actually needs the creator's attention — with
+FAQ replies pre-drafted, never auto-sent.
+
+**Demo run: 140 comments in → 17 needing attention out, 123 filtered.**
+
+![Digest overview](docs/img/01-digest-overview.png)
+
+<!-- LOOM_PLACEHOLDER: when the walkthrough video is recorded, embed
+it here, above "The problem". A Loom of the system running beats any
+written description. -->
 
 ## The problem
 
-Creators with 1,000+ comments per day spend hours scrolling through noise — repeated "first" comments, generic praise, spam — to find the small percentage that requires action: a critical question, a sponsorship inquiry, an error report on the video.
+Creators with 1,000+ comments per day spend hours scrolling through
+noise — repeated "first" comments, generic praise, spam — to find
+the small percentage that requires action: a critical question, a
+sponsorship inquiry, an error report on the video.
 
-The signal-to-noise problem doesn't scale. Once a channel is big enough to need to listen, it's also big enough that nobody has time to.
+The signal-to-noise problem doesn't scale. Once a channel is big
+enough to need to listen, it's also big enough that nobody has time
+to.
 
 ## What it does
 
@@ -23,18 +38,45 @@ The 6 categories:
 |---|---|---|
 | `spam` | Bots, link spam, scams, offensive content | Logged only |
 | `acknowledge` | Generic praise, jokes, hype, low-content reactions | Logged only — filtered out of Slack |
-| `feedback` | Actionable comments: error reports, format suggestions, content requests | Aggregated into the `#ops` digest |
-| `FAQ` | Common questions with standard answers | Claude generates a draft reply, posted individually to Slack with a copy-paste code block |
+| `feedback` | Actionable comments: error reports, format suggestions, content requests | Aggregated into the `#feedback` digest |
+| `FAQ` | Common questions with standard answers | Claude generates a draft reply with a confidence score — **never auto-sent**, always reviewed by the creator |
 | `sponsor` | Brand outreach, partnership inquiries | Aggregated into the `#biz` digest |
-| `other` | Ambiguous, non-EN/IT, or specific questions needing human review | Aggregated into the `#ops` digest |
+| `other` | Ambiguous, non-EN/IT, or specific questions needing human review | Aggregated into the `#feedback` digest |
 
-End result: ~1,000 comments compress into 1–2 Slack digests with 10–30 items that actually need attention. Spam and acknowledge stay in the audit log.
+On the demo run: 140 comments compressed into 17 items needing
+attention (7 feedback, 1 other, 6 FAQ with drafts ready, 3 sponsor),
+with 123 filtered out (11 spam, 112 acknowledge).
+
+## Why human-in-the-loop, always
+
+A core design choice: the FAQ branch generates a **draft reply with
+reasoning and a confidence score**, posted to Slack for the creator
+to send, edit, or ignore. **The workflow never auto-replies on
+YouTube.**
+
+This is intentional. Auto-reply bots erode trust with an audience —
+viewers can tell. The win isn't replacing the creator's voice; it's
+removing the 80% of work that is finding which comments deserve a
+voice at all, and pre-writing the obvious answers so the creator
+just has to send.
+
+![FAQ draft with confidence](docs/img/03-faq-draft.png)
 
 ## How it works
+
+The workflow runs across three Slack channels (`#feedback`, `#biz`,
+`#faq`) and a Supabase table for state:
+
+![Slack channels](docs/img/06-slack-channels.png)
+
+Full n8n graph:
+
+![n8n workflow canvas](docs/img/05-n8n-canvas.png)
 
 Pipeline (read `workflow.json` for the full node graph):
 
 ```
+
 Manual Trigger
   → Get processed IDs (Supabase, disabled by default in the demo)
   → Limit (collapse N to 1 item before the HTTP call)
@@ -54,24 +96,46 @@ Manual Trigger
       └─ done → Limit → Get current run records (Supabase)
                      → filter recent (Code: filter by classified_at)
                      → Switch (external, 4 branches)
-                          ├─ feedback / other → Aggregate → Code digest ops → Slack #ops
+                          ├─ feedback / other → Aggregate → Code digest ops → Slack #feedback
                           ├─ sponsor → Aggregate → Code digest biz → Slack #biz
-                          └─ FAQ → Slack #ops FAQ (one message per FAQ)
+                          └─ FAQ → Slack #faq (one message per FAQ)
+
 ```
 
-Notable design decisions:
+### Sample outputs
 
-- **Dedup before Claude, not after.** Filtering against `comment_id` already present in Supabase before classifying saves Anthropic tokens on scheduled re-runs. On the second run of the same video, ~95% of comments are skipped.
-- **Schema normalization upstream.** `Parse classification` outputs `reply_*: null` for non-FAQ rows so the Supabase batch insert (which goes through PostgREST) gets uniform keys across all categories. PostgREST rejects batches with mismatched keys.
-- **Aggregates outside the loop, individual messages inside.** Digests for feedback / other / sponsor are aggregated post-loop and sent once per channel. FAQ draft replies are sent one-per-FAQ because the per-comment context (the draft itself) is the value.
-- **Defensive parsers.** All `Code` nodes wrap `JSON.parse` in `try/catch` with a clear error containing the malformed output — Claude going off-script doesn't crash the workflow silently.
+The feedback digest, after triage:
+
+![Feedback digest](docs/img/02-digest-feedback.png)
+
+Sponsor inquiries, with AI reasoning under each entry:
+
+![Sponsor digest](docs/img/04-sponsor-digest.png)
+
+### Design decisions
+
+- **Dedup before Claude, not after.** Filtering against `comment_id`
+  already present in Supabase before classifying saves Anthropic
+  tokens on scheduled re-runs. On the second run of the same video,
+  ~95% of comments are skipped.
+- **Schema normalization upstream.** `Parse classification` outputs
+  `reply_*: null` for non-FAQ rows so the Supabase batch insert
+  (which goes through PostgREST) gets uniform keys across all
+  categories. PostgREST rejects batches with mismatched keys.
+- **Aggregates outside the loop, individual messages inside.**
+  Digests for feedback / other / sponsor are aggregated post-loop
+  and sent once per channel. FAQ draft replies are sent one-per-FAQ
+  because the per-comment context (the draft itself) is the value.
+- **Defensive parsers.** All `Code` nodes wrap `JSON.parse` in
+  `try/catch` with a clear error containing the malformed output —
+  Claude going off-script doesn't crash the workflow silently.
 
 ## Stack
 
 - [n8n](https://n8n.io) (self-hosted)
 - [Anthropic Claude](https://www.anthropic.com) — Sonnet 4.6 for classification and FAQ draft generation
 - [YouTube Data API v3](https://developers.google.com/youtube/v3) — `commentThreads` endpoint, read-only
-- [Slack incoming webhooks](https://api.slack.com/messaging/webhooks) — 3 channels (`#ops`, `#biz`, FAQ)
+- [Slack incoming webhooks](https://api.slack.com/messaging/webhooks) — 3 channels (`#feedback`, `#biz`, `#faq`)
 - [Supabase](https://supabase.com) — Postgres + PostgREST, free tier is sufficient
 
 Approximate cost on a channel with ~1,000 new comments/day: $3–8/month in Anthropic API tokens, every other service in free tier.
@@ -105,11 +169,22 @@ If you're forking this to deploy on your own infrastructure:
 - Slack webhook URLs are channel-scoped — keep them in workflow Variables (Settings → Variables), not in the exported `workflow.json` body.
 - Schedule the workflow at an interval longer than its execution time (typically 5–10 minutes for a 1,000-comment batch with the rate-limit-respecting Wait).
 
-This is a reference build tuned for channels up to ~100 comments per run. Higher-volume setups (viral videos, 1M+ sub channels) need additional engineering — happy to scope that on a call.
+This is a reference build tuned for channels up to ~100 comments per run. Higher-volume setups (viral videos, 1M+ sub channels) need additional engineering — happy to scope that on a call (link below).
 
 ## Setup
 
-See [docs/setup.md](docs/setup.md).
+See [docs/setup.md](docs/setup.md) — 30–45 minutes end to end if you've never used n8n or Supabase, 10–15 if you have.
+
+## Need this built for your channel?
+
+I build AI workflows like this one for YouTube creators and content
+businesses — channel ops automation, ship in 5–14 days, code lives
+on your GitHub.
+
+- 🌐 [mirkofratangelo.com](https://mirkofratangelo.com)
+- 📅 [Book a discovery call](https://cal.com/mirko-fratangelo/discovery)
+- 💼 [LinkedIn](https://www.linkedin.com/in/YOUR_LINKEDIN_HANDLE)
+- 🛠️ [Contra profile](https://contra.com/mirkofratangelo)
 
 ## License
 
